@@ -1,0 +1,56 @@
+# .gitignore
+
+# General
+*.py[cod]
+*.log
+*.sql
+*.sqlite3
+
+# Directories
+__pycache__/
+migrations/
+
+# Virtual environment
+venv/
+*.venv
+*.venv/
+
+# Development
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Django specific
+*.pot
+*.pyc
+/db.sqlite3
+/media
+
+# If you are using PostgreSQL
+*.postgres
+*.postgres/
+
+# If you are using celery
+celerybeat-schedule
+celerybeat.pid
+
+# Other
+.DS_Store
+.env
+.env.sample
+.env.dev
+.env.prod
+.env.stage
+*.bak
+*.cfg
+*.ini
+*.orig
+*.rej
+*.sass-cache
+*.sublime-project
+*.sublime-workspace
+*.swo
+*.vi
+*~
+~
