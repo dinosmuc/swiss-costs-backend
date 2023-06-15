@@ -54,7 +54,8 @@ MIDDLEWARE = [
 ]
 
 CORS_ORIGIN_WHITELIST = [
-   "http://localhost:3000",
+   "http://localhost:3000",  # React app
+   "http://localhost:8000",  # Django server
 ]
 
 ROOT_URLCONF = "SwissCosts.urls"

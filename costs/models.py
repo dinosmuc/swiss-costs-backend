@@ -2,22 +2,77 @@ from django.db import models
 from django.utils import timezone
 
 
+def current_year():
+    return timezone.now().year
 
-class HousingType(models.Model):
+class ValueModel(models.Model):
+    value = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+
+    class Meta:
+        abstract = True
+
+class Canton(models.Model):
+    name = models.CharField(max_length=50)
+
+    def __str__(self):
+        return self.name
+    
+
+class User(models.Model):
+    # Personal Information
+    MARTIAL_STATUS_CHOICES = [
+        ('S', 'Single'),
+        ('MSI', 'Married with a single income'),
+        ('MDI', 'Married with a double income'),
+        ('SP', 'Single parent'),
+    ]
+    CHURCH_MEMBERSHIP_CHOICES = [
+    ('church_member', 'A church member'),
+    ('not_church_member', 'Not a church member')
+]
+    AGE_CHOICES = [(i, str(i)) for i in range(18, 101)]  # Age from 18 to 100
+
+    year = models.PositiveIntegerField(default=current_year)
+    marital_status = models.CharField(max_length=3, choices=MARTIAL_STATUS_CHOICES, default='S')
+    church_member = models.CharField(max_length=20, choices=CHURCH_MEMBERSHIP_CHOICES, default='not_church_member')
+    age = models.IntegerField(choices=AGE_CHOICES)
+
+    # Family Information
+    CHILDREN_CHOICES = [(i, str(i)) for i in range(10)]  # 0 to 9 children
+
+    canton = models.ForeignKey(Canton, on_delete=models.CASCADE)
+    num_children = models.IntegerField(choices=CHILDREN_CHOICES)
+
+class Salary(models.Model):
+    salary = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+
+class Job(models.Model):
+    
+    job_title = models.CharField(max_length=50)
+    salary = models.ForeignKey(Salary, on_delete=models.CASCADE)
+   
+
+    def __str__(self):
+        return self.job_title
+
+
+
+class HousingType(ValueModel):
     HOUSING_CHOICES = [
-        ('Studio Apartment', 'Studio Apartment'),
-        ('1.5-Bedroom Apartment', '1.5-Bedroom Apartment'),
-        ('2.5-Bedroom Apartment', '2.5-Bedroom Apartment'),
-        ('3.5-Bedroom Apartment', '3.5-Bedroom Apartment'),
-        ('4.5-Bedroom Apartment', '4.5-Bedroom Apartment'),
+        ('studio', 'Studio Apartment'),
+        ('1.5_bedroom', '1.5-Bedroom Apartment'),
+        ('2.5_bedroom', '2.5-Bedroom Apartment'),
+        ('3.5_bedroom', '3.5-Bedroom Apartment'),
+        ('4.5_bedroom', '4.5-Bedroom Apartment'),
     ]
 
     type = models.CharField(max_length=50, choices=HOUSING_CHOICES)
-    value = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    def __str__(self):
-        return self.type
+    canton = models.ForeignKey(Canton, on_delete=models.CASCADE, related_name='housing_types')
 
-class HealthInsurance(models.Model):
+    def __str__(self):
+        return self.get_type_display() + " in " + self.canton.name
+
+class HealthInsurance(ValueModel):
     COVERAGE_CHOICES = [
         ('basic', 'Basic Coverage'),
         ('standard', 'Standard Coverage'),
@@ -26,11 +81,10 @@ class HealthInsurance(models.Model):
         ('maximum', 'Maximum Coverage'),
     ]
     coverage = models.CharField(max_length=50, choices=COVERAGE_CHOICES)
-    value = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     def __str__(self):
         return self.coverage
 
-class ElectricVehicle(models.Model):
+class ElectricVehicle(ValueModel):
     ELECTRICITY_CONSUMPTION_CHOICES = [
         ('low', 'Low (10-15 kWh/100km)'),
         ('medium', 'Medium (16-20 kWh/100km)'),
@@ -47,11 +101,10 @@ class ElectricVehicle(models.Model):
 
     electricity_consumption = models.CharField(max_length=50, choices=ELECTRICITY_CONSUMPTION_CHOICES)
     distance_driven = models.CharField(max_length=50, choices=DISTANCE_DRIVEN_CHOICES)
-    value = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     def __str__(self):
         return self.electricity_consumption + " " + self.distance_driven    
 
-class CombustionVehicle(models.Model):
+class CombustionVehicle(ValueModel):
     FUEL_TYPE_CHOICES = [
         ('diesel', 'Diesel'), 
         ('petrol', 'Petrol')
@@ -74,11 +127,10 @@ class CombustionVehicle(models.Model):
     fuel_type = models.CharField(max_length=50, choices=FUEL_TYPE_CHOICES, default='diesel')
     fuel_consumption = models.CharField(max_length=50, choices=FUEL_CONSUMPTION_CHOICES)
     distance_driven = models.CharField(max_length=50, choices=DISTANCE_DRIVEN_CHOICES)
-    value = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     def __str__(self):
         return self.fuel_type + " " + self.fuel_consumption + " " + self.distance_driven    
 
-class PublicTransport(models.Model):
+class PublicTransport(ValueModel):
     USAGE_CHOICES = [
         ('rarely', 'Rarely'),
         ('occasionally', 'Occasionally'),
@@ -87,12 +139,11 @@ class PublicTransport(models.Model):
     ]
 
     usage = models.CharField(max_length=50, choices=USAGE_CHOICES)
-    value = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     def __str__(self):
         return self.usage
 
 
-class PhonePlan(models.Model):
+class PhonePlan(ValueModel):
     PLAN_CHOICES = [
         ('basic', 'Basic'),
         ('standard', 'Standard'),
@@ -100,35 +151,32 @@ class PhonePlan(models.Model):
         ('unlimited', 'Unlimited'),
     ]
     plan = models.CharField(max_length=50, choices=PLAN_CHOICES)
-    value = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     def __str__(self):
         return self.plan
 
 
-class InternetPlan(models.Model):
+class InternetPlan(ValueModel):
     PLAN_CHOICES = [
         ('basic', 'Basic'),
         ('standard', 'Standard'),
         ('high_speed', 'High-Speed'),
     ]
     plan = models.CharField(max_length=50, choices=PLAN_CHOICES)
-    value = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     def __str__(self):
         return self.plan
 
-class FoodBudget(models.Model):
+class FoodBudget(ValueModel):
     BUDGET_CHOICES = [
         ('low', 'Low'),
         ('medium', 'Medium'),
         ('high', 'High'),
     ]
     budget = models.CharField(max_length=50, choices=BUDGET_CHOICES)
-    value = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     def __str__(self):
         return self.budget
 
 
-class ClothingBudget(models.Model):
+class ClothingBudget(ValueModel):
     BUDGET_CHOICES = [
         ('low', 'Low'),
         ('medium', 'Medium'),
@@ -137,11 +185,10 @@ class ClothingBudget(models.Model):
         ('extreme', 'Extreme'),
     ]
     budget = models.CharField(max_length=50, choices=BUDGET_CHOICES)
-    value = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     def __str__(self):
         return self.budget
 
-class Childcare(models.Model):
+class Childcare(ValueModel):
     CHILDCARE_CHOICES = [
         ('none', 'None'),
         ('home_based', 'Home-based Childcare'),
@@ -150,11 +197,10 @@ class Childcare(models.Model):
         ('au_pair', 'Au Pair'),
     ]
     childcare_type = models.CharField(max_length=50, choices=CHILDCARE_CHOICES)
-    value = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     def __str__(self):
         return self.childcare_type
     
-class Education(models.Model):
+class Education(ValueModel):
     EDUCATION_CHOICES = [
         ('none', 'None'),
         ('public_school', 'Public School'),
@@ -163,18 +209,16 @@ class Education(models.Model):
         ('university', 'University'),
     ]
     education_type = models.CharField(max_length=50, choices=EDUCATION_CHOICES)
-    value = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     def __str__(self):
         return self.education_type
 
-class EntertainmentAndLeisure(models.Model):
+class EntertainmentAndLeisure(ValueModel):
     BUDGET_CHOICES = [
         ('low', 'Low'),
         ('medium', 'Medium'),
         ('high', 'High'),
     ]
     budget = models.CharField(max_length=50, choices=BUDGET_CHOICES)
-    value = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     def __str__(self):
         return self.budget
 
