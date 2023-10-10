@@ -5,6 +5,10 @@ from django.utils import timezone
 def current_year():
     return timezone.now().year
 
+
+
+
+
 class ValueModel(models.Model):
     value = models.DecimalField(max_digits=10, decimal_places=2, null=True)
 
@@ -16,48 +20,47 @@ class Canton(models.Model):
 
     def __str__(self):
         return self.name
-    
 
-class User(models.Model):
-    # Personal Information
+
+
+# Age Model
+class Age(models.Model):
+    AGE_CHOICES = [(i, str(i)) for i in range(18, 101)]
+    age = models.IntegerField(choices=AGE_CHOICES, )
+
+# Marital Status Model
+class MaritalStatus(models.Model):
     MARTIAL_STATUS_CHOICES = [
         ('S', 'Single'),
         ('MSI', 'Married with a single income'),
         ('MDI', 'Married with a double income'),
         ('SP', 'Single parent'),
     ]
+    status = models.CharField(max_length=3, choices=MARTIAL_STATUS_CHOICES)
+
+# Church Member Model
+class ChurchMember(models.Model):
     CHURCH_MEMBERSHIP_CHOICES = [
-    ('church_member', 'A church member'),
-    ('not_church_member', 'Not a church member')
-]
-    AGE_CHOICES = [(i, str(i)) for i in range(18, 101)]  # Age from 18 to 100
+        ('church_member', 'A church member'),
+        ('not_church_member', 'Not a church member')
+    ]
+    membership = models.CharField(max_length=20, choices=CHURCH_MEMBERSHIP_CHOICES)
 
-    year = models.PositiveIntegerField(default=current_year)
-    marital_status = models.CharField(max_length=3, choices=MARTIAL_STATUS_CHOICES, default='S')
-    church_member = models.CharField(max_length=20, choices=CHURCH_MEMBERSHIP_CHOICES, default='not_church_member')
-    age = models.IntegerField(choices=AGE_CHOICES)
-
-    # Family Information
-    CHILDREN_CHOICES = [(i, str(i)) for i in range(10)]  # 0 to 9 children
-
-    canton = models.ForeignKey(Canton, on_delete=models.CASCADE)
-    num_children = models.IntegerField(choices=CHILDREN_CHOICES)
-
+# Salary Model
 class Salary(models.Model):
-    salary = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    amount = models.DecimalField(max_digits=10, decimal_places=2, null=True)
 
+# Job Model
 class Job(models.Model):
-    
-    job_title = models.CharField(max_length=50)
+    title = models.CharField(max_length=50)
     salary = models.ForeignKey(Salary, on_delete=models.CASCADE)
-   
 
     def __str__(self):
-        return self.job_title
+        return self.title
 
 
 
-class HousingType(ValueModel):
+class HousingType(models.Model):
     HOUSING_CHOICES = [
         ('studio', 'Studio Apartment'),
         ('1.5_bedroom', '1.5-Bedroom Apartment'),
@@ -67,12 +70,15 @@ class HousingType(ValueModel):
     ]
 
     type = models.CharField(max_length=50, choices=HOUSING_CHOICES)
-    canton = models.ForeignKey(Canton, on_delete=models.CASCADE, related_name='housing_types')
+    
 
     def __str__(self):
-        return self.get_type_display() + " in " + self.canton.name
+        return f"{self.get_type_display()} in {self.canton.name}"
 
-class HealthInsurance(ValueModel):
+
+
+
+class HealthInsurance(models.Model):
     COVERAGE_CHOICES = [
         ('basic', 'Basic Coverage'),
         ('standard', 'Standard Coverage'),
@@ -80,58 +86,73 @@ class HealthInsurance(ValueModel):
         ('premium', 'Premium Coverage'),
         ('maximum', 'Maximum Coverage'),
     ]
+    
     coverage = models.CharField(max_length=50, choices=COVERAGE_CHOICES)
+    age = models.ForeignKey(Age, on_delete=models.CASCADE, null=True)  # Linking Age to HealthInsurance
+    cost = models.FloatField(default=0)  # Add a cost field
+    
+    def calculate_cost(self):
+        if self.age.age >= 18 and self.age.age <= 30:
+            if self.coverage == 'basic':
+                return 200
+            elif self.coverage == 'standard':
+                return 300
+            elif self.coverage == 'comprehensive':
+                return 400
+            elif self.coverage == 'premium':
+                return 500
+            elif self.coverage == 'maximum':
+                return 600
+        elif self.age.age > 30 and self.age.age <= 50:
+            if self.coverage == 'basic':
+                return 250
+            elif self.coverage == 'standard':
+                return 350
+            elif self.coverage == 'comprehensive':
+                return 450
+            elif self.coverage == 'premium':
+                return 550
+            elif self.coverage == 'maximum':
+                return 650
+        else:  # for age > 50
+            if self.coverage == 'basic':
+                return 300
+            elif self.coverage == 'standard':
+                return 400
+            elif self.coverage == 'comprehensive':
+                return 500
+            elif self.coverage == 'premium':
+                return 600
+            elif self.coverage == 'maximum':
+                return 700
+    
+    def save(self, *args, **kwargs):
+        self.cost = self.calculate_cost()
+        super().save(*args, **kwargs)
+
+
+
+
+
+class FuelPrice(models.Model):
+    diesel_price = models.FloatField("Price of Diesel per liter", default=0)
+    petrol_price = models.FloatField("Price of Petrol per liter", default=0)
+    
     def __str__(self):
-        return self.coverage
+        return f"Diesel: {self.diesel_price} CHF, Petrol: {self.petrol_price} CHF"
 
-class ElectricVehicle(ValueModel):
-    ELECTRICITY_CONSUMPTION_CHOICES = [
-        ('low', 'Low (10-15 kWh/100km)'),
-        ('medium', 'Medium (16-20 kWh/100km)'),
-        ('high', 'High (21-25 kWh/100km)'),
-        ('very_high', 'Very High (26+ kWh/100km)')
-    ]
 
-    DISTANCE_DRIVEN_CHOICES = [
-        ('low', 'Low (0-20 km)'),
-        ('medium', 'Medium (21-50 km)'),
-        ('high', 'High (51-100 km)'),
-        ('very_high', 'Very High (100+ km)')
-    ]   
+class ElectricityPrice(models.Model):
+    price_per_kWh = models.FloatField("Price per kWh", default=0)
 
-    electricity_consumption = models.CharField(max_length=50, choices=ELECTRICITY_CONSUMPTION_CHOICES)
-    distance_driven = models.CharField(max_length=50, choices=DISTANCE_DRIVEN_CHOICES)
     def __str__(self):
-        return self.electricity_consumption + " " + self.distance_driven    
+        return f"Electricity: {self.price_per_kWh} CHF/kWh"
 
-class CombustionVehicle(ValueModel):
-    FUEL_TYPE_CHOICES = [
-        ('diesel', 'Diesel'), 
-        ('petrol', 'Petrol')
-    ]
 
-    FUEL_CONSUMPTION_CHOICES = [
-        ('low', 'Low (1-5 L/100km)'),
-        ('medium', 'Medium (6-10 L/100km)'),
-        ('high', 'High (11-15 L/100km)'),
-        ('very_high', 'Very High (16+ L/100km)')
-    ]
-
-    DISTANCE_DRIVEN_CHOICES = [
-        ('low', 'Low (0-20 km)'),
-        ('medium', 'Medium (21-50 km)'),
-        ('high', 'High (51-100 km)'),
-        ('very_high', 'Very High (100+ km)')
-    ]
-
-    fuel_type = models.CharField(max_length=50, choices=FUEL_TYPE_CHOICES, default='diesel')
-    fuel_consumption = models.CharField(max_length=50, choices=FUEL_CONSUMPTION_CHOICES)
-    distance_driven = models.CharField(max_length=50, choices=DISTANCE_DRIVEN_CHOICES)
-    def __str__(self):
-        return self.fuel_type + " " + self.fuel_consumption + " " + self.distance_driven    
 
 class PublicTransport(ValueModel):
     USAGE_CHOICES = [
+        ('never', 'Never'),
         ('rarely', 'Rarely'),
         ('occasionally', 'Occasionally'),
         ('weekly', 'Weekly'),
@@ -145,6 +166,7 @@ class PublicTransport(ValueModel):
 
 class PhonePlan(ValueModel):
     PLAN_CHOICES = [
+        ('none', 'None'),
         ('basic', 'Basic'),
         ('standard', 'Standard'),
         ('premium', 'Premium'),
@@ -157,6 +179,7 @@ class PhonePlan(ValueModel):
 
 class InternetPlan(ValueModel):
     PLAN_CHOICES = [
+        ('none', 'None'),
         ('basic', 'Basic'),
         ('standard', 'Standard'),
         ('high_speed', 'High-Speed'),
@@ -167,17 +190,25 @@ class InternetPlan(ValueModel):
 
 class FoodBudget(ValueModel):
     BUDGET_CHOICES = [
+        ('very_low', 'Very Low'),
         ('low', 'Low'),
+        ('moderate_low', 'Moderate Low'),
         ('medium', 'Medium'),
+        ('moderate_high', 'Moderate High'),
         ('high', 'High'),
+        ('very_high', 'Very High'),
+        ('extreme', 'Extreme'),
     ]
     budget = models.CharField(max_length=50, choices=BUDGET_CHOICES)
+    
     def __str__(self):
         return self.budget
 
 
+
 class ClothingBudget(ValueModel):
     BUDGET_CHOICES = [
+        ('none', 'None'),
         ('low', 'Low'),
         ('medium', 'Medium'),
         ('high', 'High'),
@@ -214,6 +245,7 @@ class Education(ValueModel):
 
 class EntertainmentAndLeisure(ValueModel):
     BUDGET_CHOICES = [
+        ('none', 'None'),
         ('low', 'Low'),
         ('medium', 'Medium'),
         ('high', 'High'),
