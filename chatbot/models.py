@@ -1,53 +1,68 @@
 from langchain.chat_models import ChatOpenAI
-from langchain.prompts import ChatPromptTemplate
-from langchain.schema import HumanMessage
-from langchain.chains import SequentialChain, LLMChain 
-
-
+from langchain.chains import LLMChain
+from langchain.prompts import PromptTemplate
+from langchain.memory import ConversationBufferWindowMemory 
 from django.conf import settings
 
 
+
+# Global variable to store a single conversation memory
+global_conversation_memory = ConversationBufferWindowMemory(k=20, memory_key="history")
+
+# Replace with your actual API key
 api_key = settings.OPENAI_API_KEY
 
 
-chat_model = ChatOpenAI(openai_api_key=api_key,
-                        temperature=1,
-                        max_tokens=500,
-                        model_name="gpt-3.5-turbo")
+def reset_conversation_memory():
+    global global_conversation_memory
+    global_conversation_memory = ConversationBufferWindowMemory(k=20, ai_prefix="AI Assistant", human_prefix="Human")
 
 
+def chatbot_response(first_message, system_prompt, temperature, message, file=None):
 
-def clean_response(response):
-    # Assuming `response` has a `.content` attribute that's a string
-    response_content = response.content
+
     
-    # Remove "AI:" and "Human message:" from the response
-    cleaned_content = response_content.replace("AI:", "").replace("Human message:", "").strip()
-    
-    # Update the content of the response object
-    response.content = cleaned_content
-    
-    return response
+    global global_conversation_memory
 
-def get_response(query):
-    human_message = HumanMessage(content=query)
-    response = chat_model([human_message])
+   
 
-    response = clean_response(response)
-    lower_content = response.content.lower()
+   
+    # Determine the appropriate prompt template
+    if system_prompt:
+        prompt = system_prompt + "\n" + first_message + "\n" """
+            Respond in sturctured manner.
+            Ask questions one at a time!!
 
-    if "openai" in lower_content or "gpt" in lower_content:
-        return "I'm sorry, I can only provide information related to Switzerland. Please ask a relevant question."
-    
-    if len(response.content.split()) > 200:
-        template1 = "Condense this in 200 tokens\n{response}"
-        prompt1 = ChatPromptTemplate.from_template(template1)
-        chain1 = LLMChain(llm=chat_model, prompt=prompt1, output_key="condense_message")
-        seq_chain = SequentialChain(chains=[chain1],
-                                    input_variables=["response"],
-                                    output_variables=["condense_message"],
-                                    verbose=True)
-        content = seq_chain(response.content)
-        return content
+            Current conversation:
+
+            {history}
+            Human: {input}
+            File: ```{file}```
+            AI Assistant:
+            """
     else:
-        return response.content
+        prompt = """
+            Act as a helpful assistant.
+            If you do not know the answer to a question, truthfully say so.
+
+            Current conversation:
+            {history}
+            Human: {input}
+            File: ```{file}```
+            AI Assistant:
+            """
+
+    # Initialize the GPT-4 model
+    gpt_4 = ChatOpenAI(model_name="gpt-4-1106-preview", openai_api_key=api_key, temperature=temperature, max_tokens=500)
+
+    # Create a prompt template with the necessary input variables
+    prompt_template = PromptTemplate(input_variables=["history", "input","file"], template=prompt)
+
+    memory=global_conversation_memory
+    # Create a conversation chain with the Langchain components using the shared global conversation memory
+    llm_chain = LLMChain(llm=gpt_4, prompt=prompt_template, verbose=False)
+
+    # Generate the reply using the chatbot reply function
+    reply = llm_chain.predict(input=message, file=file, history=memory)
+
+    return reply

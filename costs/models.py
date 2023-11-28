@@ -62,6 +62,7 @@ class Job(models.Model):
 
 class HousingType(models.Model):
     HOUSING_CHOICES = [
+        ('room', 'Room in Shared Apartment'),
         ('studio', 'Studio Apartment'),
         ('1.5_bedroom', '1.5-Bedroom Apartment'),
         ('2.5_bedroom', '2.5-Bedroom Apartment'),
@@ -152,7 +153,7 @@ class ElectricityPrice(models.Model):
 
 class PublicTransport(ValueModel):
     USAGE_CHOICES = [
-        ('never', 'Never'),
+        ('none', 'None'),
         ('rarely', 'Rarely'),
         ('occasionally', 'Occasionally'),
         ('weekly', 'Weekly'),
