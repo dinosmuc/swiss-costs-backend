@@ -7,7 +7,7 @@ import json
 import PyPDF2
 import io
 
-from .models import chatbot_response, reset_conversation_memory  # Ensure correct import path
+from .models import chatbot_response,history_init, reset_conversation_memory  # Ensure correct import path
 
 
 def read_pdf(uploaded_file):
@@ -19,11 +19,14 @@ def read_pdf(uploaded_file):
         text += page.extract_text() if page.extract_text() else ""
     return text
 
-
+marker = False
 
 @method_decorator(csrf_exempt, name='dispatch')
 class ChatbotView(View):
     def post(self, request, *args, **kwargs):
+
+        global marker
+
         try:
             print("Received request")
 
@@ -45,16 +48,29 @@ class ChatbotView(View):
             system_message = data.get("systemMessage", "")
             user_message = data.get("message", "")
             first_message = data.get("firstMessage", "")
+            print("First message: ",first_message)
+
+            if first_message and marker == False:
+
+                history_init(first_message)
+                
+                marker = True
+
+            
             
             file = request.FILES.get('file')
 
-            
+            if file:
+                
+                print("File received")
+            else:
+                print("No file received")
 
             file_text = read_pdf(file) if file else "No file attached"                
             
 
             # Generate the response from the chatbot
-            response_data = chatbot_response(first_message, system_message, 1, user_message, file_text)  # This should return a string
+            response_data = chatbot_response(system_message, 1, user_message, file_text)  # This should return a string
 
             # Format the response by replacing newlines with HTML line breaks
             # and wrap the response in a div with the chatbot-message class
